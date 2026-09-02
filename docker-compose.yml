@@ -1,0 +1,63 @@
+services:
+
+  # ── 1. Train: write a versioned artifact to models/registry ─────────────────
+  train:
+    build: .
+    entrypoint: ["python"]
+    command:
+      - src/train.py
+      - --registry
+      - models/registry
+    volumes:
+      - ./models:/app/models
+
+  # ── 2. Predict: load the latest artifact, write predictions.csv ─────────────
+  predict:
+    build: .
+    depends_on: [train]
+    volumes:
+      - ./data:/app/data:ro          # real telemetry — read-only
+      - ./models:/app/models:ro      # registry — read-only
+      - .:/app/out
+    command:
+      - src/predict.py
+      - --data
+      - data
+      - --registry
+      - models/registry
+      - --out
+      - out/predictions.csv
+
+  # ── 3. Validate: check predictions.csv schema ────────────────────────────────
+  validate:
+    build: .
+    depends_on: [predict]
+    volumes:
+      - .:/app/out:ro
+    command:
+      - validate_submission.py
+      - out/predictions.csv
+
+  # ── 4. Drift: PSI drift report ───────────────────────────────────────────────
+  drift:
+    build: .
+    volumes:
+      - ./data:/app/data:ro
+      - ./models:/app/models
+    command:
+      - src/drift.py
+      - --data
+      - data
+      - --registry
+      - models/registry
+
+  # ── 5. Test: pytest determinism + rollback (synthetic data, no real files) ───
+  test:
+    build: .
+    entrypoint: ["python", "-m", "pytest"]
+    command:
+      - tests/
+      - -v
+      - --tb=short
+    volumes:
+      - .:/app

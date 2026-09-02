@@ -1,0 +1,10 @@
+{
+  "version_id": "v1_2026-09-01T232858Z",
+  "created_at": "2026-09-01T23:28:58.364709+00:00",
+  "params": {
+    "version": "v1",
+    "sigma": 3.0,
+    "baseline_days": 28,
+    "recent_days": 7
+  }
+}

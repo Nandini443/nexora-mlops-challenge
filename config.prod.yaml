@@ -1,0 +1,10 @@
+sigma: 3.0
+baseline_days: 28
+recent_days: 7
+visits_per_week: 15
+data_dir: "data/prod"
+output_dir: "outputs/prod"
+logging_level: "INFO"
+scored_weeks:
+  start: "2026-02-02"
+  count: 8

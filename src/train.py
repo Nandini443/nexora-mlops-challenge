@@ -2,13 +2,14 @@
 means recording the params and metadata — there are no weights to fit."""
 
 from __future__ import annotations
-
 import argparse
 import json
+import logging
 import pathlib
 from datetime import datetime, timezone
 
 from scoring import BaselineScorer
+from config import load_config
 
 
 def save_version(scorer: BaselineScorer, registry_dir: pathlib.Path) -> pathlib.Path:
@@ -29,19 +30,36 @@ def save_version(scorer: BaselineScorer, registry_dir: pathlib.Path) -> pathlib.
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--sigma", type=float, default=3.0)
-    parser.add_argument("--baseline-days", type=int, default=28)
-    parser.add_argument("--recent-days", type=int, default=7)
-    parser.add_argument(
-        "--registry", type=pathlib.Path,
-        default=pathlib.Path(__file__).resolve().parent.parent / "models" / "registry",
-    )
+    parser.add_argument("--config", type=str, default="config.yaml",
+                        help="Path to config file (e.g., config.dev.yaml)")
+    parser.add_argument("--registry", type=pathlib.Path, default=pathlib.Path("models/registry"),
+                        help="Directory to write versioned artifacts into")
+    parser.add_argument("--sigma", type=float, default=None)
+    parser.add_argument("--baseline-days", type=int, default=None)
+    parser.add_argument("--recent-days", type=int, default=None)
     args = parser.parse_args(argv)
 
-    scorer = BaselineScorer(
-        sigma=args.sigma, baseline_days=args.baseline_days, recent_days=args.recent_days
+    cfg = load_config(args.config)
+
+    logging.basicConfig(
+        level=getattr(logging, cfg.get("logging_level", "INFO")),
+        format="%(asctime)s [%(levelname)s] %(message)s",
     )
+
+    # CLI flags override config file values
+    sigma = args.sigma if args.sigma is not None else cfg["sigma"]
+    baseline_days = args.baseline_days if args.baseline_days is not None else cfg["baseline_days"]
+    recent_days = args.recent_days if args.recent_days is not None else cfg["recent_days"]
+
+    logging.info(
+        "Starting training with sigma=%s, baseline_days=%s, recent_days=%s",
+        sigma, baseline_days, recent_days,
+    )
+
+    scorer = BaselineScorer(sigma=sigma, baseline_days=baseline_days, recent_days=recent_days)
     out_path = save_version(scorer, args.registry)
+
+    logging.info("Saved version artifact at %s", out_path)
     print(f"saved version artifact: {out_path}")
     return 0
 

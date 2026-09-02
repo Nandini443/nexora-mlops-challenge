@@ -1,0 +1,10 @@
+sigma: 2.5
+baseline_days: 14
+recent_days: 5
+visits_per_week: 10
+data_dir: "data/prod"
+output_dir: "outputs/prod"
+logging_level: "DEBUG"
+scored_weeks:
+  start: "2026-02-02"
+  count: 4

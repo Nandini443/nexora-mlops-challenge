@@ -1,0 +1,66 @@
+name: MLOps CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  # ── Job 1: Unit tests (no real data needed) ──────────────────────────────────
+  test:
+    name: pytest — determinism & rollback
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
+
+  # ── Job 2: Full pipeline (uses committed predictions.csv as fixture) ──────────
+  pipeline:
+    name: validate predictions schema
+    runs-on: ubuntu-latest
+    needs: test          # only run if tests pass
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # The telemetry parquet data is gitignored and not available in CI.
+      # We validate the committed predictions.csv directly — this confirms
+      # the schema is always correct whenever a predictions file is pushed.
+      - name: Validate committed predictions.csv
+        run: python validate_submission.py predictions.csv
+
+      # Smoke-test train.py (no data needed — it only writes a JSON artifact)
+      - name: Smoke-test train.py
+        run: python src/train.py --registry /tmp/registry_ci
+
+      - name: Confirm registry artifact was created
+        run: |
+          count=$(ls /tmp/registry_ci/*.json | wc -l)
+          echo "Registry artifacts: $count"
+          [ "$count" -ge 1 ]
+
+      - name: Upload predictions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: predictions-${{ github.sha }}
+          path: predictions.csv
+          retention-days: 30
