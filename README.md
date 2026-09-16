@@ -203,3 +203,6 @@ See [DECISIONS.md](DECISIONS.md) for the full decision log. Summary:
 3. **Flat JSON registry** — rollback with one flag, no infrastructure
 4. **YAML config-per-environment** — all hyperparams in version control
 5. **PSI drift detection** — industry-standard, CI-integrable, cost-model-aligned
+
+project video link:
+https://drive.google.com/file/d/1JYTiANLAS8ptePc-S4S0FX-NHLr84U-J/view?usp=sharing
